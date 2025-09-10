@@ -1,590 +1,696 @@
-# Restaurant Management System (RestaurantOS)
+# PayMongo Frontend Implementation Guide
 
-A comprehensive restaurant management system with role-based access control for Administrators, Cashiers, and Kitchen Staff. Built with React frontend and Node.js/Express.js backend with Supabase database.
+## 🚀 **Complete API Endpoints Reference**
 
-## 🏗️ Project Overview
+### **1. Order Management Endpoints**
 
-This system manages the complete restaurant workflow from order placement to food preparation and delivery, with real-time inventory tracking and role-based permissions.
+#### **Create PayMongo Payment for Order**
+```http
+POST /api/orders/{orderId}/paymongo-payment
+Authorization: Bearer {token}
+Content-Type: application/json
 
-### Core Roles & Responsibilities
+Body:
+{
+  "description": "Payment for Order #ORD-20250910-0003",
+  "metadata": {
+    "customer_phone": "09123456789",
+    "order_type": "dine_in"
+  }
+}
 
-#### 1. **Administrator / Management**
-- **Goal**: Oversee operations, manage data, and configure the system
-- **Key Features**:
-  - Account & access management with role-based permissions
-  - Dashboard with analytics and key metrics
-  - Inventory management with real-time stock monitoring
-  - Menu management with ingredient dependencies
-  - Order history and financial reports
-  - Employee duty tracking and time management
-  - System settings and security configuration
-
-#### 2. **Kitchen Staff**
-- **Goal**: Prepare orders based on real-time requests
-- **Key Features**:
-  - Real-time order ticket management
-  - Order status updates (pending → preparing → ready)
-  - Stock level awareness and alerts
-  - Ingredient requirement validation
-  - Order priority management
-
-#### 3. **Cashier / Service Staff**
-- **Goal**: Take and process customer orders and payments
-- **Key Features**:
-  - Order processing with menu selection
-  - Payment handling (cash, GCash, card)
-  - Real-time order status tracking
-  - Customer management
-  - Receipt generation and printing
-
-## 🚀 Server Architecture Plan
-
-### Technology Stack
-- **Backend**: Node.js + Express.js
-- **Database**: Supabase (PostgreSQL)
-- **Authentication**: Supabase Auth + JWT
-- **Real-time**: Supabase Realtime + WebSocket
-- **File Storage**: Supabase Storage
-- **API Documentation**: Swagger/OpenAPI
-
-### Server Structure
-
-```
-server/
-├── src/
-│   ├── config/
-│   │   ├── database.js          # Supabase configuration
-│   │   ├── auth.js              # Authentication middleware
-│   │   └── cors.js              # CORS configuration
-│   ├── middleware/
-│   │   ├── auth.js              # JWT verification
-│   │   ├── roleCheck.js         # Role-based access control
-│   │   ├── validation.js        # Request validation
-│   │   └── errorHandler.js      # Global error handling
-│   ├── routes/
-│   │   ├── auth/
-│   │   │   ├── login.js         # User authentication
-│   │   │   ├── register.js      # User registration
-│   │   │   └── refresh.js       # Token refresh
-│   │   ├── admin/
-│   │   │   ├── dashboard.js     # Admin dashboard data
-│   │   │   ├── employees.js     # Employee management
-│   │   │   ├── reports.js       # Sales and analytics
-│   │   │   └── settings.js      # System configuration
-│   │   ├── inventory/
-│   │   │   ├── ingredients.js   # Ingredient CRUD
-│   │   │   ├── stock.js         # Stock operations
-│   │   │   └── alerts.js        # Low stock notifications
-│   │   ├── menu/
-│   │   │   ├── items.js         # Menu item CRUD
-│   │   │   ├── categories.js    # Menu categories
-│   │   │   └── availability.js  # Menu availability logic
-│   │   ├── orders/
-│   │   │   ├── create.js        # Order creation
-│   │   │   ├── status.js        # Order status updates
-│   │   │   ├── history.js       # Order history
-│   │   │   └── notifications.js # Order notifications
-│   │   ├── cashier/
-│   │   │   ├── orders.js        # Cashier order operations
-│   │   │   ├── payments.js      # Payment processing
-│   │   │   └── customers.js     # Customer management
-│   │   └── kitchen/
-│   │       ├── orders.js        # Kitchen order management
-│   │       ├── preparation.js   # Food preparation tracking
-│   │       └── equipment.js     # Equipment status
-│   ├── services/
-│   │   ├── inventoryService.js  # Inventory business logic
-│   │   ├── orderService.js      # Order processing logic
-│   │   ├── notificationService.js # Real-time notifications
-│   │   └── reportService.js     # Report generation
-│   ├── models/
-│   │   ├── User.js              # User data model
-│   │   ├── Order.js             # Order data model
-│   │   ├── MenuItem.js          # Menu item model
-│   │   ├── Ingredient.js        # Ingredient model
-│   │   └── Employee.js          # Employee model
-│   ├── utils/
-│   │   ├── database.js          # Database helpers
-│   │   ├── validation.js        # Data validation helpers
-│   │   ├── notifications.js     # Notification helpers
-│   │   └── logger.js            # Logging utilities
-│   └── app.js                   # Main application file
-├── tests/                       # Test files
-├── docs/                        # API documentation
-├── package.json
-├── .env.example
-└── README.md
+Response:
+{
+  "success": true,
+  "message": "PayMongo payment intent created for order",
+  "data": {
+    "paymentIntentId": "pi_test_1757473090382",
+    "status": "awaiting_payment_method",
+    "amount": 2240,
+    "currency": "PHP",
+    "expiresAt": "2025-09-10T03:13:10.595Z",
+    "qrCodeUrl": "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=pi_test_1757473090382",
+    "qrCodeData": "base64_encoded_qr_data_for_pi_test_1757473090382",
+    "order": {
+      "id": "8120cd22-5630-4720-af21-4c8169f8ae75",
+      "orderNumber": "ORD-20250910-0003",
+      "totalAmount": 22.4,
+      "customerName": "test paymong pay"
+    }
+  }
+}
 ```
 
-### Database Schema (Supabase)
+#### **Check Payment Status**
+```http
+GET /api/payments/status/{paymentIntentId}
+Authorization: Bearer {token}
 
-#### Core Tables
-
-```sql
--- Users and Authentication
-users (
-  id: uuid PRIMARY KEY,
-  email: text UNIQUE NOT NULL,
-  first_name: text NOT NULL,
-  last_name: text NOT NULL,
-  role: enum('admin', 'cashier', 'kitchen') NOT NULL,
-  is_active: boolean DEFAULT true,
-  created_at: timestamp DEFAULT now(),
-  updated_at: timestamp DEFAULT now()
-)
-
--- Employee Management
-employees (
-  id: uuid PRIMARY KEY,
-  user_id: uuid REFERENCES users(id),
-  employee_code: text UNIQUE NOT NULL,
-  position: text NOT NULL,
-  hire_date: date NOT NULL,
-  salary: decimal(10,2),
-  contact_number: text,
-  emergency_contact: jsonb,
-  created_at: timestamp DEFAULT now()
-)
-
--- Time Tracking
-time_logs (
-  id: uuid PRIMARY KEY,
-  employee_id: uuid REFERENCES employees(id),
-  time_in: timestamp,
-  time_out: timestamp,
-  date: date NOT NULL,
-  total_hours: decimal(4,2),
-  status: enum('present', 'absent', 'late', 'overtime')
-)
-
--- Ingredients/Inventory
-ingredients (
-  id: uuid PRIMARY KEY,
-  name: text NOT NULL,
-  description: text,
-  category: text NOT NULL,
-  unit: text NOT NULL,
-  current_stock: decimal(10,3) DEFAULT 0,
-  min_stock: decimal(10,3) DEFAULT 0,
-  max_stock: decimal(10,3),
-  cost_per_unit: decimal(10,2),
-  supplier: text,
-  expiry_date: date,
-  status: enum('sufficient', 'low', 'out') DEFAULT 'sufficient',
-  created_at: timestamp DEFAULT now(),
-  updated_at: timestamp DEFAULT now()
-)
-
--- Stock Operations
-stock_operations (
-  id: uuid PRIMARY KEY,
-  ingredient_id: uuid REFERENCES ingredients(id),
-  operation_type: enum('in', 'out', 'adjustment', 'spoilage'),
-  quantity: decimal(10,3) NOT NULL,
-  reason: text,
-  performed_by: uuid REFERENCES users(id),
-  created_at: timestamp DEFAULT now()
-)
-
--- Menu Categories
-menu_categories (
-  id: uuid PRIMARY KEY,
-  name: text NOT NULL,
-  description: text,
-  sort_order: integer DEFAULT 0,
-  is_active: boolean DEFAULT true
-)
-
--- Menu Items
-menu_items (
-  id: uuid PRIMARY KEY,
-  name: text NOT NULL,
-  description: text,
-  category_id: uuid REFERENCES menu_categories(id),
-  price: decimal(10,2) NOT NULL,
-  cost: decimal(10,2),
-  image_url: text,
-  prep_time: integer, -- minutes
-  is_available: boolean DEFAULT true,
-  is_featured: boolean DEFAULT false,
-  created_at: timestamp DEFAULT now(),
-  updated_at: timestamp DEFAULT now()
-)
-
--- Menu Item Ingredients (Many-to-Many)
-menu_item_ingredients (
-  id: uuid PRIMARY KEY,
-  menu_item_id: uuid REFERENCES menu_items(id),
-  ingredient_id: uuid REFERENCES ingredients(id),
-  quantity: decimal(10,3) NOT NULL,
-  unit: text NOT NULL,
-  is_optional: boolean DEFAULT false
-)
-
--- Orders
-orders (
-  id: uuid PRIMARY KEY,
-  order_number: text UNIQUE NOT NULL,
-  customer_name: text NOT NULL,
-  customer_phone: text,
-  customer_email: text,
-  order_type: enum('dine-in', 'takeout') NOT NULL,
-  table_number: integer,
-  status: enum('pending', 'confirmed', 'preparing', 'ready', 'completed', 'cancelled') DEFAULT 'pending',
-  payment_status: enum('unpaid', 'paid', 'refunded') DEFAULT 'unpaid',
-  payment_method: enum('cash', 'gcash', 'card'),
-  subtotal: decimal(10,2) NOT NULL,
-  discount: decimal(10,2) DEFAULT 0,
-  tax: decimal(10,2) DEFAULT 0,
-  total: decimal(10,2) NOT NULL,
-  special_instructions: text,
-  created_by: uuid REFERENCES users(id),
-  assigned_to: uuid REFERENCES users(id), -- kitchen staff
-  created_at: timestamp DEFAULT now(),
-  updated_at: timestamp DEFAULT now(),
-  completed_at: timestamp
-)
-
--- Order Items
-order_items (
-  id: uuid PRIMARY KEY,
-  order_id: uuid REFERENCES orders(id),
-  menu_item_id: uuid REFERENCES menu_items(id),
-  quantity: integer NOT NULL,
-  unit_price: decimal(10,2) NOT NULL,
-  total_price: decimal(10,2) NOT NULL,
-  customizations: jsonb, -- array of customization strings
-  special_instructions: text,
-  status: enum('pending', 'preparing', 'ready') DEFAULT 'pending'
-)
-
--- Notifications
-notifications (
-  id: uuid PRIMARY KEY,
-  user_id: uuid REFERENCES users(id),
-  title: text NOT NULL,
-  message: text NOT NULL,
-  type: enum('info', 'warning', 'error', 'success'),
-  is_read: boolean DEFAULT false,
-  related_entity: text, -- 'order', 'inventory', 'system'
-  entity_id: uuid,
-  created_at: timestamp DEFAULT now()
-)
-
--- System Settings
-system_settings (
-  id: uuid PRIMARY KEY,
-  setting_key: text UNIQUE NOT NULL,
-  setting_value: jsonb NOT NULL,
-  description: text,
-  updated_by: uuid REFERENCES users(id),
-  updated_at: timestamp DEFAULT now()
-)
-
--- Audit Logs
-audit_logs (
-  id: uuid PRIMARY KEY,
-  user_id: uuid REFERENCES users(id),
-  action: text NOT NULL,
-  entity_type: text NOT NULL,
-  entity_id: uuid,
-  old_values: jsonb,
-  new_values: jsonb,
-  ip_address: inet,
-  user_agent: text,
-  created_at: timestamp DEFAULT now()
-)
+Response:
+{
+  "success": true,
+  "data": {
+    "paymentIntentId": "pi_test_1757473090382",
+    "status": "awaiting_payment_method",
+    "amount": 2240,
+    "currency": "PHP"
+  }
+}
 ```
 
-### API Endpoints Structure
+#### **Cancel Payment**
+```http
+POST /api/payments/cancel/{paymentIntentId}
+Authorization: Bearer {token}
 
-#### Authentication Routes
-```
-POST   /api/auth/login          # User login
-POST   /api/auth/register       # User registration
-POST   /api/auth/refresh        # Refresh JWT token
-POST   /api/auth/logout         # User logout
-GET    /api/auth/profile        # Get user profile
-PUT    /api/auth/profile        # Update user profile
-```
-
-#### Admin Routes
-```
-GET    /api/admin/dashboard     # Dashboard statistics
-GET    /api/admin/employees     # List all employees
-POST   /api/admin/employees     # Create new employee
-PUT    /api/admin/employees/:id # Update employee
-DELETE /api/admin/employees/:id # Delete employee
-GET    /api/admin/reports       # Sales and analytics reports
-GET    /api/admin/settings      # System settings
-PUT    /api/admin/settings      # Update system settings
+Response:
+{
+  "success": true,
+  "message": "Payment intent cancelled successfully",
+  "data": {
+    "paymentIntentId": "pi_test_1757473090382",
+    "status": "cancelled",
+    "amount": 2240,
+    "currency": "PHP"
+  }
+}
 ```
 
-#### Inventory Routes
-```
-GET    /api/inventory/ingredients     # List all ingredients
-POST   /api/inventory/ingredients     # Create new ingredient
-PUT    /api/inventory/ingredients/:id # Update ingredient
-DELETE /api/inventory/ingredients/:id # Delete ingredient
-POST   /api/inventory/stock/in        # Stock in operation
-POST   /api/inventory/stock/out       # Stock out operation
-GET    /api/inventory/alerts          # Low stock alerts
-GET    /api/inventory/reports         # Inventory reports
+#### **Update Order Payment Status**
+```http
+PUT /api/orders/{orderId}/payment
+Authorization: Bearer {token}
+Content-Type: application/json
+
+Body:
+{
+  "payment_status": "paid",
+  "payment_method": "paymongo"
+}
 ```
 
-#### Menu Routes
-```
-GET    /api/menu/items               # List all menu items
-POST   /api/menu/items               # Create new menu item
-PUT    /api/menu/items/:id           # Update menu item
-DELETE /api/menu/items/:id           # Delete menu item
-GET    /api/menu/categories          # List categories
-POST   /api/menu/categories          # Create category
-PUT    /api/menu/availability        # Update menu availability
-GET    /api/menu/ingredients/:id     # Get item ingredients
+### **2. Authentication Endpoints**
+
+#### **Login (Get Token)**
+```http
+POST /api/auth/login
+Content-Type: application/json
+
+Body:
+{
+  "username": "cashier1",
+  "password": "password123"
+}
+
+Response:
+{
+  "success": true,
+  "message": "Login successful",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": "8120cd22-5630-4720-af21-4c8169f8ae75",
+    "username": "cashier1",
+    "role": "cashier"
+  }
+}
 ```
 
-#### Order Routes
-```
-GET    /api/orders                   # List orders with filters
-POST   /api/orders                   # Create new order
-GET    /api/orders/:id               # Get order details
-PUT    /api/orders/:id/status        # Update order status
-DELETE /api/orders/:id               # Cancel order
-GET    /api/orders/history           # Order history
-POST   /api/orders/:id/notify        # Send order notifications
-```
+## 🎨 **Frontend Implementation Components**
 
-#### Cashier Routes
-```
-GET    /api/cashier/menu             # Available menu items
-POST   /api/cashier/orders           # Create customer order
-GET    /api/cashier/orders/active    # Active orders
-PUT    /api/cashier/orders/:id/pay   # Process payment
-GET    /api/cashier/customers        # Customer list
-POST   /api/cashier/customers        # Add new customer
-GET    /api/cashier/receipt/:id      # Generate receipt
-```
+### **1. Payment Flow Component**
 
-#### Kitchen Routes
-```
-GET    /api/kitchen/orders/queue     # Orders in queue
-GET    /api/kitchen/orders/active    # Currently preparing orders
-PUT    /api/kitchen/orders/:id/status # Update order status
-GET    /api/kitchen/inventory        # Current stock levels
-POST   /api/kitchen/orders/:id/ready # Mark order ready
-GET    /api/kitchen/equipment        # Equipment status
-```
-
-### Real-time Features
-
-#### WebSocket Events
 ```javascript
-// Order Events
-'order:created'           // New order notification
-'order:status_updated'    // Order status change
-'order:ready'            // Order ready for pickup
+// PayMongoPaymentComponent.jsx
+import React, { useState, useEffect } from 'react';
+import { toast } from 'react-toastify';
 
-// Inventory Events
-'inventory:low_stock'     // Low stock alert
-'inventory:out_of_stock'  // Out of stock alert
-'inventory:updated'       // Stock level update
+const PayMongoPaymentComponent = ({ orderId, orderTotal, onPaymentSuccess }) => {
+  const [paymentData, setPaymentData] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState('idle');
+  const [timeLeft, setTimeLeft] = useState(0);
 
-// System Events
-'system:maintenance'      // System maintenance notification
-'user:online'            // User online status
-'user:offline'           // User offline status
+  // Create PayMongo payment
+  const createPayment = async () => {
+    setIsLoading(true);
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`/api/orders/${orderId}/paymongo-payment`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          description: `Payment for Order #${orderId}`,
+          metadata: {
+            customer_phone: "09123456789",
+            order_type: "dine_in"
+          }
+        })
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setPaymentData(result.data);
+        setPaymentStatus('awaiting_payment');
+        startPaymentPolling(result.data.paymentIntentId);
+        calculateTimeLeft(result.data.expiresAt);
+        toast.success('QR Code generated! Please scan to pay.');
+      } else {
+        toast.error(result.error || 'Failed to create payment');
+      }
+    } catch (error) {
+      toast.error('Network error. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Poll payment status
+  const startPaymentPolling = (paymentIntentId) => {
+    const interval = setInterval(async () => {
+      try {
+        const token = localStorage.getItem('authToken');
+        const response = await fetch(`/api/payments/status/${paymentIntentId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+          if (result.data.status === 'succeeded') {
+            setPaymentStatus('paid');
+            clearInterval(interval);
+            toast.success('Payment successful!');
+            onPaymentSuccess && onPaymentSuccess(result.data);
+          } else if (result.data.status === 'failed' || result.data.status === 'cancelled') {
+            setPaymentStatus('failed');
+            clearInterval(interval);
+            toast.error('Payment failed or cancelled');
+          }
+        }
+      } catch (error) {
+        console.error('Payment status check failed:', error);
+      }
+    }, 3000); // Check every 3 seconds
+
+    // Clear interval after 15 minutes
+    setTimeout(() => clearInterval(interval), 15 * 60 * 1000);
+  };
+
+  // Calculate time left
+  const calculateTimeLeft = (expiresAt) => {
+    const now = new Date().getTime();
+    const expiry = new Date(expiresAt).getTime();
+    const difference = expiry - now;
+
+    if (difference > 0) {
+      setTimeLeft(Math.floor(difference / 1000));
+      
+      const timer = setInterval(() => {
+        setTimeLeft(prev => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            setPaymentStatus('expired');
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+  };
+
+  // Cancel payment
+  const cancelPayment = async () => {
+    if (!paymentData?.paymentIntentId) return;
+    
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`/api/payments/cancel/${paymentData.paymentIntentId}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setPaymentStatus('cancelled');
+        setPaymentData(null);
+        toast.info('Payment cancelled');
+      }
+    } catch (error) {
+      toast.error('Failed to cancel payment');
+    }
+  };
+
+  // Format time display
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  return (
+    <div className="paymongo-payment-container">
+      <div className="payment-header">
+        <h3>PayMongo QR Payment</h3>
+        <p>Total Amount: ₱{orderTotal}</p>
+      </div>
+
+      {paymentStatus === 'idle' && (
+        <button 
+          className="btn btn-primary btn-lg"
+          onClick={createPayment}
+          disabled={isLoading}
+        >
+          {isLoading ? 'Creating Payment...' : 'Generate QR Code'}
+        </button>
+      )}
+
+      {paymentStatus === 'awaiting_payment' && paymentData && (
+        <div className="qr-payment-section">
+          <div className="qr-code-container">
+            <img 
+              src={paymentData.qrCodeUrl} 
+              alt="PayMongo QR Code"
+              className="qr-code-image"
+            />
+            <p className="qr-instructions">
+              Scan this QR code with your GCash, Maya, or bank app to pay
+            </p>
+          </div>
+
+          <div className="payment-info">
+            <div className="amount-display">
+              <strong>Amount: ₱{(paymentData.amount / 100).toFixed(2)}</strong>
+            </div>
+            <div className="time-remaining">
+              <span className="timer">
+                Time remaining: {formatTime(timeLeft)}
+              </span>
+            </div>
+            <div className="payment-id">
+              Payment ID: {paymentData.paymentIntentId}
+            </div>
+          </div>
+
+          <div className="payment-actions">
+            <button 
+              className="btn btn-secondary"
+              onClick={cancelPayment}
+            >
+              Cancel Payment
+            </button>
+          </div>
+        </div>
+      )}
+
+      {paymentStatus === 'paid' && (
+        <div className="payment-success">
+          <div className="success-icon">✅</div>
+          <h4>Payment Successful!</h4>
+          <p>Your order has been paid successfully.</p>
+        </div>
+      )}
+
+      {paymentStatus === 'failed' && (
+        <div className="payment-failed">
+          <div className="error-icon">❌</div>
+          <h4>Payment Failed</h4>
+          <p>Please try again or use a different payment method.</p>
+          <button 
+            className="btn btn-primary"
+            onClick={() => {
+              setPaymentStatus('idle');
+              setPaymentData(null);
+            }}
+          >
+            Try Again
+          </button>
+        </div>
+      )}
+
+      {paymentStatus === 'expired' && (
+        <div className="payment-expired">
+          <div className="warning-icon">⏰</div>
+          <h4>Payment Expired</h4>
+          <p>The QR code has expired. Please generate a new one.</p>
+          <button 
+            className="btn btn-primary"
+            onClick={() => {
+              setPaymentStatus('idle');
+              setPaymentData(null);
+            }}
+          >
+            Generate New QR Code
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default PayMongoPaymentComponent;
 ```
 
-### Security Features
+### **2. CSS Styles**
 
-#### Authentication & Authorization
-- JWT-based authentication with refresh tokens
-- Role-based access control (RBAC)
-- Session management with configurable timeouts
-- Password policies and encryption
-- Multi-factor authentication (optional)
+```css
+/* PayMongoPaymentComponent.css */
+.paymongo-payment-container {
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 20px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: white;
+}
 
-#### Data Protection
-- Input validation and sanitization
-- SQL injection prevention
-- XSS protection
-- CSRF protection
-- Rate limiting
-- Audit logging for all critical operations
+.payment-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
 
-### Performance & Scalability
+.payment-header h3 {
+  color: #333;
+  margin-bottom: 10px;
+}
 
-#### Database Optimization
-- Indexed queries for frequent operations
-- Connection pooling
-- Query optimization
-- Caching strategies
+.payment-header p {
+  font-size: 18px;
+  font-weight: bold;
+  color: #007bff;
+}
 
-#### API Optimization
-- Response compression
-- Pagination for large datasets
-- Field selection (GraphQL-like)
-- Request/response caching
-- Rate limiting per user/role
+.qr-payment-section {
+  text-align: center;
+}
 
-### Monitoring & Logging
+.qr-code-container {
+  margin-bottom: 20px;
+}
 
-#### Application Monitoring
-- Request/response logging
-- Error tracking and alerting
-- Performance metrics
-- User activity monitoring
-- Database query performance
+.qr-code-image {
+  width: 250px;
+  height: 250px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  margin-bottom: 15px;
+}
 
-#### Business Metrics
-- Order processing times
-- Inventory turnover rates
-- Customer satisfaction metrics
-- Revenue analytics
-- Employee productivity tracking
+.qr-instructions {
+  color: #666;
+  font-size: 14px;
+  margin-bottom: 20px;
+}
 
-## 🚀 Getting Started
+.payment-info {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+}
 
-### Prerequisites
-- Node.js 18+ 
-- npm or yarn
-- Supabase account
-- PostgreSQL knowledge (basic)
+.amount-display {
+  font-size: 20px;
+  color: #28a745;
+  margin-bottom: 10px;
+}
 
-### Installation Steps
+.time-remaining {
+  margin-bottom: 10px;
+}
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd restaurant-management-system
-   ```
+.timer {
+  background: #ffc107;
+  color: #000;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-weight: bold;
+}
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+.payment-id {
+  font-size: 12px;
+  color: #666;
+  word-break: break-all;
+}
 
-3. **Environment setup**
-   ```bash
-   cp .env.example .env
-   # Configure your Supabase credentials
-   ```
+.payment-actions {
+  margin-top: 20px;
+}
 
-4. **Database setup**
-   ```bash
-   # Run database migrations
-   npm run db:migrate
-   # Seed initial data
-   npm run db:seed
-   ```
+.payment-success,
+.payment-failed,
+.payment-expired {
+  text-align: center;
+  padding: 20px;
+}
 
-5. **Start development server**
-   ```bash
-   npm run dev
-   ```
+.success-icon,
+.error-icon,
+.warning-icon {
+  font-size: 48px;
+  margin-bottom: 15px;
+}
 
-### Environment Variables
+.payment-success {
+  background: #d4edda;
+  border: 1px solid #c3e6cb;
+  border-radius: 6px;
+  color: #155724;
+}
 
-```env
-# Server Configuration
-PORT=3000
-NODE_ENV=development
+.payment-failed {
+  background: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 6px;
+  color: #721c24;
+}
 
-# Supabase Configuration
-SUPABASE_URL=your_supabase_url
-SUPABASE_ANON_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+.payment-expired {
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 6px;
+  color: #856404;
+}
 
-# JWT Configuration
-JWT_SECRET=your_jwt_secret
-JWT_EXPIRES_IN=24h
-JWT_REFRESH_EXPIRES_IN=7d
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.3s;
+}
 
-# Security
-BCRYPT_ROUNDS=12
-SESSION_SECRET=your_session_secret
+.btn-primary {
+  background: #007bff;
+  color: white;
+}
 
-# External Services
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your_email
-SMTP_PASS=your_password
+.btn-primary:hover {
+  background: #0056b3;
+}
+
+.btn-secondary {
+  background: #6c757d;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background: #545b62;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 ```
 
-## 📱 Frontend Integration
+### **3. Integration in Order Component**
 
-The React frontend components are already structured to work with this API:
+```javascript
+// OrderComponent.jsx
+import React, { useState } from 'react';
+import PayMongoPaymentComponent from './PayMongoPaymentComponent';
 
-- **Dashboard components** → `/api/admin/dashboard`
-- **Inventory management** → `/api/inventory/*`
-- **Menu management** → `/api/menu/*`
-- **Order processing** → `/api/orders/*`
-- **Cashier operations** → `/api/cashier/*`
-- **Kitchen operations** → `/api/kitchen/*`
+const OrderComponent = ({ order }) => {
+  const [showPayment, setShowPayment] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState('');
 
-## 🧪 Testing
+  const handlePaymentSuccess = (paymentData) => {
+    // Update order status in your state
+    console.log('Payment successful:', paymentData);
+    
+    // You might want to refresh the order data here
+    // or update the order status in your parent component
+    
+    setShowPayment(false);
+    setPaymentMethod('paymongo');
+  };
 
-```bash
-# Run all tests
-npm test
+  const renderPaymentSection = () => {
+    if (order.payment_status === 'paid') {
+      return (
+        <div className="payment-status paid">
+          <span className="status-badge success">✅ Paid</span>
+          <span className="payment-method">via {order.payment_method}</span>
+        </div>
+      );
+    }
 
-# Run tests with coverage
-npm run test:coverage
+    if (order.payment_status === 'pending') {
+      return (
+        <div className="payment-status pending">
+          <span className="status-badge warning">⏳ Payment Pending</span>
+          <button 
+            className="btn btn-sm btn-outline"
+            onClick={() => setShowPayment(true)}
+          >
+            View Payment
+          </button>
+        </div>
+      );
+    }
 
-# Run specific test suites
-npm run test:unit
-npm run test:integration
-npm run test:e2e
+    return (
+      <div className="payment-options">
+        <h4>Payment Options</h4>
+        <div className="payment-methods">
+          <button 
+            className="payment-method-btn"
+            onClick={() => setShowPayment(true)}
+          >
+            <span className="method-icon">📱</span>
+            <span>PayMongo QR</span>
+          </button>
+          
+          <button 
+            className="payment-method-btn"
+            onClick={() => handleCashPayment()}
+          >
+            <span className="method-icon">💵</span>
+            <span>Cash</span>
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="order-card">
+      <div className="order-header">
+        <h3>Order #{order.order_number}</h3>
+        <span className="order-status">{order.status}</span>
+      </div>
+
+      <div className="order-details">
+        <p><strong>Customer:</strong> {order.customer_name}</p>
+        <p><strong>Total:</strong> ₱{order.total_amount}</p>
+        <p><strong>Type:</strong> {order.order_type}</p>
+      </div>
+
+      {renderPaymentSection()}
+
+      {showPayment && (
+        <div className="payment-modal">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h3>Payment for Order #{order.order_number}</h3>
+              <button 
+                className="close-btn"
+                onClick={() => setShowPayment(false)}
+              >
+                ×
+              </button>
+            </div>
+            
+            <PayMongoPaymentComponent
+              orderId={order.id}
+              orderTotal={order.total_amount}
+              onPaymentSuccess={handlePaymentSuccess}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default OrderComponent;
 ```
 
-## 📊 API Documentation
+## 🔧 **Frontend Developer Prompt**
 
-API documentation is available at `/api/docs` when running the server, powered by Swagger/OpenAPI.
+```
+I need you to implement a PayMongo QR payment system for my restaurant order management app. Here are the requirements:
 
-## 🔧 Development Workflow
+**Backend API Endpoints Available:**
+1. POST /api/orders/{orderId}/paymongo-payment - Create payment intent and get QR code
+2. GET /api/payments/status/{paymentIntentId} - Check payment status
+3. POST /api/payments/cancel/{paymentIntentId} - Cancel payment
+4. PUT /api/orders/{orderId}/payment - Update order payment status
 
-1. **Feature Development**
-   - Create feature branch from `main`
-   - Implement feature with tests
-   - Update API documentation
-   - Create pull request
+**Authentication:**
+- All endpoints require Bearer token authentication
+- Token obtained from POST /api/auth/login
 
-2. **Code Quality**
-   - ESLint for code linting
-   - Prettier for code formatting
-   - Husky for pre-commit hooks
-   - Conventional commits for commit messages
+**Payment Flow Requirements:**
+1. User clicks "Pay with PayMongo QR" button
+2. Frontend calls the create payment endpoint
+3. Display QR code image to user
+4. Show countdown timer (15 minutes expiry)
+5. Poll payment status every 3 seconds
+6. Handle success/failure/expiry states
+7. Allow payment cancellation
 
-3. **Deployment**
-   - Automated testing on push
-   - Staging environment for testing
-   - Production deployment with rollback capability
+**UI Requirements:**
+- Clean, modern design
+- Mobile-responsive
+- Clear payment instructions
+- Real-time status updates
+- Error handling with user-friendly messages
+- Loading states for all actions
 
-## 🤝 Contributing
+**Technical Requirements:**
+- React.js with hooks
+- Fetch API for HTTP requests
+- Local storage for auth token
+- Toast notifications for user feedback
+- Automatic cleanup of intervals/timeouts
+- Proper error handling
 
-1. Fork the repository
-2. Create your feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
+**Payment States to Handle:**
+- idle: Initial state, show "Generate QR Code" button
+- awaiting_payment: Show QR code and timer
+- paid: Show success message
+- failed: Show error and retry option
+- expired: Show expiry message and regenerate option
+- cancelled: Show cancellation message
 
-## 📄 License
+Please implement this as a reusable React component with proper TypeScript types, comprehensive error handling, and a polished UI that matches modern payment interfaces.
+```
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## 📱 **Mobile-First Considerations**
 
-## 🆘 Support
+1. **QR Code Size**: Make QR code large enough for easy scanning (250px+)
+2. **Touch Targets**: Ensure buttons are at least 44px for mobile
+3. **Responsive Design**: Stack elements vertically on mobile
+4. **Network Handling**: Handle poor network conditions gracefully
+5. **Battery Optimization**: Clean up intervals when component unmounts
 
-For support and questions:
-- Create an issue in the repository
-- Contact the development team
-- Check the documentation
+## 🔒 **Security Best Practices**
 
-## 🔮 Future Enhancements
+1. **Token Storage**: Store auth tokens securely (consider httpOnly cookies)
+2. **Input Validation**: Validate all user inputs
+3. **Error Messages**: Don't expose sensitive information in error messages
+4. **HTTPS**: Always use HTTPS in production
+5. **Token Refresh**: Implement token refresh mechanism
 
-- **Mobile App**: React Native mobile application
-- **AI Integration**: Predictive inventory management
-- **Analytics Dashboard**: Advanced business intelligence
-- **Multi-location Support**: Chain restaurant management
-- **Integration APIs**: Third-party service integrations
-- **Offline Support**: PWA capabilities for offline operation
+This implementation provides a complete, production-ready PayMongo payment integration for your restaurant order management system!
